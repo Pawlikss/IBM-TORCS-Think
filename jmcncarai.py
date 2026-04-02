@@ -58,8 +58,6 @@ import sys
 import getopt
 import os
 import time
-import pyautogui
-import pathlib
 PI= 3.14159265359
 
 data_size = 2**17
@@ -174,26 +172,15 @@ class Client():
                 print("Count Down : " + str(n_fail))
                 if n_fail < 0:
                     print("relaunch torcs")
-                    
-                    cwd = os.getcwd()
-                    torcs_dir = pathlib.Path(__file__).resolve().parent.parent / "torcs"
-                    if torcs_dir.exists():
-                        os.chdir(torcs_dir)
-
-                    os.system('taskkill /f /im wtorcs.exe >nul 2>&1')
+                    os.system('pkill torcs')
                     time.sleep(1.0)
-                    
                     if self.vision is False:
-                        os.system('start "" wtorcs.exe -nofuel -nodamage -nolaptime')
+                        os.system('torcs -nofuel -nodamage -nolaptime &')
                     else:
-                        os.system('start "" wtorcs.exe -nofuel -nodamage -nolaptime -vision')
+                        os.system('torcs -nofuel -nodamage -nolaptime -vision &')
 
-                    time.sleep(3.0)
-                    for key in ['enter', 'enter', 'up', 'up', 'enter', 'enter']:
-                        pyautogui.press(key)
-                        time.sleep(0.2)
-                    time.sleep(5.0)
-                    os.chdir(cwd)
+                    time.sleep(1.0)
+                    os.system('sh autostart.sh')
                     n_fail = 5
                 n_fail -= 1
 
@@ -428,9 +415,9 @@ class ServerState():
                 elif k == 'angle':
                     asyms= [
                           "  !  ", ".|'  ", "./'  ", "_.-  ", ".--  ", "..-  ",
-                          "---  ", ".__  ", "-._  ", "'-.  ", r"'\.  ", "'|.  ",
+                          "---  ", ".__  ", "-._  ", "'-.  ", "'\.  ", "'|.  ",
                           "  |  ", "  .|'", "  ./'", "  .-'", "  _.-", "  __.",
-                          "  ---", "  --.", "  -._", "  -..", r"  '\.", "  '|."  ]
+                          "  ---", "  --.", "  -._", "  -..", "  '\.", "  '|."  ]
                     rad= self.d[k]
                     deg= int(rad*180/PI)
                     symno= int(.5+ (rad+PI) / (PI/12) )
@@ -543,37 +530,48 @@ def drive_example(c):
     '''This is only an example. It will get around the track but the
     correct thing to do is write your own `drive()` function.'''
     S,R= c.S.d,c.R.d
-    target_speed=300
+    target_speed=160
 
     # Steer To Corner
-    R['steer']= S['angle']*15 / PI
+    R['steer']= S['angle']*25 / PI
     # Steer To Center
-    R['steer']-= S['trackPos']*.10
+    R['steer']-= S['trackPos']*.25
 
     # Throttle Control
-    if S['speedX'] < target_speed - (R['steer']*50):
-        R['accel']+= .01
+    R['accel'] = max(0.0, min(1.0, R['accel']))
+    
+#if abs(S['angle']) > 0.35:
+ #   R['brake'] = 0.3
+  #  R['accel'] = 0.0
+#else:
+ #   R['brake'] = 0.0
+  #  R['accel'] = 1.0  # Full throttle on straights
+
+    if S['speedX'] < target_speed - (R['steer']*2.5):
+        R['accel']+= .4
     else:
-        R['accel']-= .01
+        R['accel']-= .2
     if S['speedX']<10:
        R['accel']+= 1/(S['speedX']+.1)
 
     # Traction Control System
     if ((S['wheelSpinVel'][2]+S['wheelSpinVel'][3]) -
-       (S['wheelSpinVel'][0]+S['wheelSpinVel'][1]) > 5):
-       R['accel']-= .2
+       (S['wheelSpinVel'][0]+S['wheelSpinVel'][1]) > 2):
+       R['accel']-= 0.1
+
+
 
     # Automatic Transmission
     R['gear']=1
-    if S['speedX']>50:
+    if S['speedX']>60:
         R['gear']=2
-    if S['speedX']>80:
+    if S['speedX']>100:
         R['gear']=3
-    if S['speedX']>110:
-        R['gear']=4
     if S['speedX']>140:
+        R['gear']=4
+    if S['speedX']>190:
         R['gear']=5
-    if S['speedX']>170:
+    if S['speedX']>220:
         R['gear']=6
     return
 

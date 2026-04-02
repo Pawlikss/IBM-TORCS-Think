@@ -1,0 +1,13 @@
+/models/
+/tensorboard_logs/
+/logs/
+
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.env
+
+.DS_Store
+Thumbs.db
