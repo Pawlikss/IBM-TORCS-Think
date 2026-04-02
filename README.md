@@ -1,6 +1,6 @@
 # TORCS Autonomous Driving Agent (SAC)
 
-Projekt wykorzystujący algorytm uczenia ze wzmocnieniem (Reinforcement Learning) do nauki autonomicznej jazdy w symulatorze wyścigowym TORCS. Agent uczy się sterowania kierownicą oraz operowania gazem i hamulcem w celu pokonywania okrążeń bez kolizji.
+Projekt wykorzystujący algorytm SAC do nauki autonomicznej jazdy w symulatorze wyścigowym TORCS.
 
 ## Użyte technologie
 
@@ -12,20 +12,15 @@ Projekt wykorzystujący algorytm uczenia ze wzmocnieniem (Reinforcement Learning
 ### 1. Trening modelu
 
 Aby rozpocząć uczenie agenta od zera, upewnij się, że masz uruchomiony serwer gry TORCS, a następnie odpal skrypt:
-\`\`\`bash
 python train.py
-\`\`\`
+
 Proces uczenia korzysta z TensorBoard. Aby śledzić postępy, użyj:
-\`\`\`bash
 tensorboard --logdir tensorboard_logs
-\`\`\`
 
 ### 2. Testowanie wytrenowanego bota
 
 Aby zobaczyć bota w akcji bez trybu eksploracji (deterministycznie), uruchom:
-\`\`\`bash
 python test_model.py
-\`\`\`
 
 ## Architektura nagród (Reward System)
 
