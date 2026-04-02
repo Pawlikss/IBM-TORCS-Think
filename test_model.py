@@ -3,9 +3,9 @@ from stable_baselines3 import SAC
 from gym_torcs import TorcsEnv
 
 def main():
-    env = TorcsEnv(vision=False, throttle=False, gear_change=False)
+    env = TorcsEnv(vision=False, throttle=True, gear_change=False)
 
-    model_filename = "torcs_sac_no_throttle.zip"
+    model_filename = "torcs_sac_190000_steps.zip"
     model_path = os.path.join(".", "models", model_filename)
     
     print(f"Wczytuje model z: {model_path}")

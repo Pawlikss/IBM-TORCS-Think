@@ -277,9 +277,9 @@ class TorcsEnv(gym.Env):
                 speedY=np.array([raw_obs['speedY']], dtype=np.float32)/self.default_speed,
                 speedZ=np.array([raw_obs['speedZ']], dtype=np.float32)/self.default_speed,
                 opponents=np.array(raw_obs['opponents'], dtype=np.float32)/200.,
-                rpm=np.array([raw_obs['rpm']], dtype=np.float32) / 10000.0,       # <--- NAPRAWIONY ZMYSŁ (Silnik)
+                rpm=np.array([raw_obs['rpm']], dtype=np.float32) / 10000.0, #normalizacja rpm do zakresu [0, 1]
                 track=np.array(raw_obs['track'], dtype=np.float32)/200.,
-                wheelSpinVel=np.array(raw_obs['wheelSpinVel'], dtype=np.float32) / 100.0  # <--- NAPRAWIONY ZMYSŁ (Koła)
+                wheelSpinVel=np.array(raw_obs['wheelSpinVel'], dtype=np.float32) / 100.0 #normalizacja prędkości obrotowej koła do zakresu [0, 1]
             )
         else:
             names = ['focus', 'speedX', 'speedY', 'speedZ', 'opponents', 'rpm', 'track', 'wheelSpinVel', 'img']
@@ -292,8 +292,8 @@ class TorcsEnv(gym.Env):
                 speedY=np.array([raw_obs['speedY']], dtype=np.float32)/self.default_speed,
                 speedZ=np.array([raw_obs['speedZ']], dtype=np.float32)/self.default_speed,
                 opponents=np.array(raw_obs['opponents'], dtype=np.float32)/200.,
-                rpm=np.array([raw_obs['rpm']], dtype=np.float32) / 10000.0,       # <--- NAPRAWIONY ZMYSŁ (Silnik)
+                rpm=np.array([raw_obs['rpm']], dtype=np.float32) / 10000.0, #normalizacja rpm do zakresu [0, 1]
                 track=np.array(raw_obs['track'], dtype=np.float32)/200.,
-                wheelSpinVel=np.array(raw_obs['wheelSpinVel'], dtype=np.float32) / 100.0, # <--- NAPRAWIONY ZMYSŁ (Koła)
+                wheelSpinVel=np.array(raw_obs['wheelSpinVel'], dtype=np.float32) / 100.0, #normalizacja prędkości obrotowej koła do zakresu [0, 1]  
                 img=image_rgb
             )
