@@ -245,7 +245,11 @@ class TorcsEnv(gym.Env):
         idx += 1
 
         if self.throttle is True:
-            torcs_action.update({'accel': float(a[idx])})
+            action_raw = float(a[idx])
+            if action_raw > 0:
+                torcs_action.update({'accel': action_raw, 'brake': 0.0})
+            else:
+                torcs_action.update({'accel': 0.0, 'brake': abs(action_raw)})
             idx += 1
 
         if self.gear_change is True:

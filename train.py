@@ -29,7 +29,20 @@ def main():
     )
 
     # Kontynuacja treningu z istniejącego modelu
-    model = SAC.load("./models/torcs_sac_310000_steps.zip", env=env, tensorboard_log="./tensorboard_logs/")
+    #model = SAC.load("./models/torcs_sac_290000_steps.zip", env=env, tensorboard_log="./tensorboard_logs/")
+
+    # Wstrzykujemy nowe, bardzo małe parametry do gotowego mózgu (Fine-Tuning)
+    custom_params = {
+        "learning_rate": 0.0001,
+        "ent_coef": 0.01
+    }
+
+    model = SAC.load(
+        "./models/torcs_sac_290000_steps.zip", 
+        env=env, 
+        tensorboard_log="./tensorboard_logs/", 
+        custom_objects=custom_params
+    )
 
     # Zapisuje stan sieci co 10 000 kroków
     checkpoint_callback = CheckpointCallback(
