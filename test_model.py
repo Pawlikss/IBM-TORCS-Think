@@ -1,34 +1,39 @@
 import os
 from stable_baselines3 import SAC
+from stable_baselines3.common.vec_env import DummyVecEnv
 from gym_torcs import TorcsEnv
 
 def main():
-    env = TorcsEnv(vision=False, throttle=True, gear_change=False)
+    raw_env = TorcsEnv(vision=False, throttle=True, gear_change=False)
+    env = DummyVecEnv([lambda: raw_env])
 
-    model_filename = "torcs_sac_480000_steps.zip"
+    model_filename = "torcs_sac_420000_steps.zip"  
     model_path = os.path.join(".", "models", model_filename)
     
-    print(f"Wczytuje model z: {model_path}")
-    try:
-        model = SAC.load(model_path)
-        print("Model wczytany")
-    except Exception as e:
-        print(f"Błąd wczytywania")
-        print(e)
-        return
-
-    obs, info = env.reset()
+    print(f"Próbuję wczytać model z: {model_path}")
+    model = SAC.load(model_path)
     
-    print("Start")
+    obs = env.reset()
+    print("Rozpoczynam jazdę testową z telemetrią")
     
     while True:
         action, _states = model.predict(obs, deterministic=True)
         
-        obs, reward, terminated, truncated, info = env.step(action)
+        steer = action[0][0]
+        pedal = action[0][1]
         
-        if terminated or truncated:
-            print(f"Koniec epizodu Powód: {info.get('terminal_reason')}")
-            obs, info = env.reset()
+        if pedal > 0:
+            pedal_str = f"GAZ: {pedal * 100:3.0f}%    "
+        else:
+            pedal_str = f"HAMULEC: {abs(pedal) * 100:3.0f}%"
+            
+        print(f"Kierownica: {steer:6.2f}  |  {pedal_str}")
+        
+        obs, reward, done, info = env.step(action)
+        
+        if done[0]:
+            print("Przerwana sesja")
+            obs = env.reset()
 
 if __name__ == "__main__":
     main()

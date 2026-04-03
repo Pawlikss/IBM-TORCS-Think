@@ -24,25 +24,22 @@ def main():
         learning_rate=0.0003,    # bezpieczny krok uczenia
         buffer_size=100000,      # Rozmiar pamięci doświadczeń
         batch_size=256,          # Ile próbek bierze do jednej aktualizacji wag sieci
-        ent_coef=0.1,         #regulacja współczynnika entropii
+        ent_coef="auto",         #regulacja współczynnika entropii
         learning_starts=2000,
     )
 
-    # Kontynuacja treningu z istniejącego modelu
-    #model = SAC.load("./models/torcs_sac_290000_steps.zip", env=env, tensorboard_log="./tensorboard_logs/")
+    #Fine-Tuning
+    # custom_params = {
+    #     "learning_rate": 0.0001,
+    #     "ent_coef": 0.01
+    # }
 
-    # Wstrzykujemy nowe, bardzo małe parametry do gotowego mózgu (Fine-Tuning)
-    custom_params = {
-        "learning_rate": 0.0001,
-        "ent_coef": 0.01
-    }
-
-    model = SAC.load(
-        "./models/torcs_sac_290000_steps.zip", 
-        env=env, 
-        tensorboard_log="./tensorboard_logs/", 
-        custom_objects=custom_params
-    )
+    # model = SAC.load(
+    #     "./models/torcs_sac_500000_steps.zip", 
+    #     env=env, 
+    #     tensorboard_log="./tensorboard_logs/", 
+    #     custom_objects=custom_params
+    # )
 
     # Zapisuje stan sieci co 10 000 kroków
     checkpoint_callback = CheckpointCallback(
@@ -53,7 +50,7 @@ def main():
 
     print("Start treningu")
     # total_timesteps to ilość klatek decyzyjnych
-    model.learn(total_timesteps=500000, callback=checkpoint_callback, reset_num_timesteps=False)
+    model.learn(total_timesteps=500000, callback=checkpoint_callback, reset_num_timesteps=True)
 
     model.save("./models/torcs_sac_final")
     print("Trening zakończony pomyślnie")

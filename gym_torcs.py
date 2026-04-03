@@ -251,7 +251,6 @@ class TorcsEnv(gym.Env):
             else:
                 torcs_action.update({'accel': 0.0, 'brake': abs(action_raw)})
             idx += 1
-
         if self.gear_change is True:
             gear_raw = float(a[idx])  
             gear = int(np.clip(np.round(((gear_raw + 1.0) / 2.0) * 5.0) + 1, 1, 6))
