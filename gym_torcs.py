@@ -67,6 +67,10 @@ class TorcsEnv(gym.Env):
         # Steering
         action_torcs["steer"] = this_action["steer"]  # in [-1, 1]
 
+        if self.throttle is True:
+            action_torcs["accel"] = this_action["accel"]
+            action_torcs["brake"] = this_action["brake"]
+
         # Simple Automatic Throttle Control by Snakeoil
         if self.throttle is False:
             target_speed = self.default_speed
@@ -121,7 +125,7 @@ class TorcsEnv(gym.Env):
 
         #nagroda za prędkość do przodu
         forward = speed_x * cos_a
-        raw_reward = 1.0 + (forward * 0.1)
+        raw_reward = forward * 0.1
 
         #kary kierownica
         steer_change = abs(current_steer - self.last_steer)
