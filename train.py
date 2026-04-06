@@ -11,47 +11,48 @@ def main():
     os.makedirs("./tensorboard_logs", exist_ok=True)
 
     env = TorcsEnv(vision=False, throttle=True, gear_change=False)
-
-    # Monitor śledzi statystyki, a DummyVecEnv pozwala algorytmom SB3 działać na środowisku
     env = Monitor(env, "./logs/")
     env = DummyVecEnv([lambda: env])
 
-    # model = SAC(
-    #     "MlpPolicy", 
-    #     env, 
-    #     verbose=1, 
-    #     tensorboard_log="./tensorboard_logs/",
-    #     learning_rate=0.0003,    # bezpieczny krok uczenia
-    #     buffer_size=100000,      # Rozmiar pamięci doświadczeń
-    #     batch_size=256,          # Ile próbek bierze do jednej aktualizacji wag sieci
-    #     ent_coef="auto",         #regulacja współczynnika entropii
-    #     learning_starts=2000,
-    # )
+    MODEL_PATH = "./models/torcs_sac_latest.zip"
+    REPLAY_BUFFER_PATH = "./models/torcs_sac_latest_replay.pkl"
 
-    #Fine-Tuning
-    custom_params = {
-        "learning_rate": 0.0001,    # mniejszy krok uczenia dla fine-tuningu
-    }
+    if os.path.exists(MODEL_PATH):
+        print("Wznawianie treningu z pliku: ", MODEL_PATH)
+        model = SAC.load(MODEL_PATH, env=env, tensorboard_log="./tensorboard_logs/")
+        
+        if os.path.exists(REPLAY_BUFFER_PATH):
+            print("Wczytywanie Replay Buffer")
+            model.load_replay_buffer(REPLAY_BUFFER_PATH)
+        else:
+            print("Brak pliku Replay Buffer")
+    else:
+        model = SAC(
+            "MlpPolicy", 
+            env, 
+            verbose=1, 
+            tensorboard_log="./tensorboard_logs/",
+            learning_rate=0.0003,    
+            buffer_size=100000,      
+            batch_size=256,          
+            ent_coef="auto",
+            learning_starts=2000,
+        )
 
-    model = SAC.load(
-         "./models/torcs_sac_2300000_steps.zip", 
-         env=env, 
-         tensorboard_log="./tensorboard_logs/", 
-         custom_objects=custom_params
-    )
-
-    # Zapisuje stan sieci co 10 000 kroków
+    # Zapis stanu sieci i BUFORA co 10 000 kroków
     checkpoint_callback = CheckpointCallback(
         save_freq=10000,
         save_path="./models/",
-        name_prefix="torcs_sac"
+        name_prefix="torcs_sac",
+        save_replay_buffer=True
     )
-
-    print("Start treningu")
-    # total_timesteps to ilość klatek decyzyjnych
+    
+    # reset_num_timesteps=False łączy ze sobą wykresy na TensorBoardzie po wczytaniu
     model.learn(total_timesteps=1000000, callback=checkpoint_callback, reset_num_timesteps=False)
 
-    model.save("./models/torcs_sac_final")
+    # Bezpieczny zapis na koniec
+    model.save(MODEL_PATH)
+    model.save_replay_buffer(REPLAY_BUFFER_PATH)
     print("Trening zakończony pomyślnie")
 
 if __name__ == "__main__":

@@ -50,9 +50,13 @@ class TorcsEnv(gym.Env):
             self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(2,), dtype=np.float32)
 
         if vision is False:
-            self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(68,), dtype=np.float32)
+            self.observation_space = spaces.Box(
+                low=-np.inf, high=np.inf, shape=(24,), dtype=np.float32
+            )
         else:
-            self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(68 + 64 * 64 * 3,), dtype=np.float32)
+            self.observation_space = spaces.Box(
+                low=-np.inf, high=np.inf, shape=(70 + 64 * 64 * 3,), dtype=np.float32
+            )
 
     def step(self, u):
         client = getattr(self, "client", None)
@@ -233,13 +237,15 @@ class TorcsEnv(gym.Env):
 
     def get_obs(self):
         obs = self.observation
-        parts = []
-        for field in obs._fields:
-            val = getattr(obs, field)
-            if isinstance(val, np.ndarray):
-                parts.append(val.ravel())
-            else:
-                parts.append(np.array([val], dtype=np.float32))
+        # Bierzemy tylko najważniejsze dane (łącznie 24 wartości)
+        parts = [
+            np.atleast_1d(np.asarray(obs.track, dtype=np.float32)).ravel(),
+            np.atleast_1d(np.asarray(obs.speedX, dtype=np.float32)).ravel(),
+            np.atleast_1d(np.asarray(obs.speedY, dtype=np.float32)).ravel(),
+            np.atleast_1d(np.asarray(obs.angle, dtype=np.float32)).ravel(),
+            np.atleast_1d(np.asarray(obs.trackPos, dtype=np.float32)).ravel(),
+            np.array([self.last_steer], dtype=np.float32)
+        ]
         return np.concatenate(parts).astype(np.float32)
 
     def agent_to_torcs(self, u):
@@ -249,11 +255,12 @@ class TorcsEnv(gym.Env):
         idx += 1
 
         if self.throttle is True:
-            action_raw = float(a[idx])
-            if action_raw > 0:
-                torcs_action.update({'accel': action_raw, 'brake': 0.0})
+            # 85% przestrzeni decyzyjnej na precyzyjne sterowanie gazem, a tylko 15% na hamulec, sprawia, że bot fizycznie nie może wcisnąć gazu i hamulca jednocześnie
+            raw_accel = float(a[idx])
+            if raw_accel >= -0.7:
+                torcs_action.update({'accel': (raw_accel + 0.7) / 1.7, 'brake': 0.0})
             else:
-                torcs_action.update({'accel': 0.0, 'brake': abs(action_raw)})
+                torcs_action.update({'accel': 0.0, 'brake': (-raw_accel - 0.7) / 0.3})
             idx += 1
         if self.gear_change is True:
             gear_raw = float(a[idx])  
@@ -276,7 +283,7 @@ class TorcsEnv(gym.Env):
 
     def make_observaton(self, raw_obs):
         if self.vision is False:
-            names = ['focus', 'speedX', 'speedY', 'speedZ', 'opponents', 'rpm', 'track', 'wheelSpinVel']
+            names = ['focus', 'speedX', 'speedY', 'speedZ', 'opponents', 'rpm', 'track', 'wheelSpinVel', 'angle', 'trackPos']
             Observation = col.namedtuple('Observation', names)
             return Observation(
                 focus=np.array(raw_obs['focus'], dtype=np.float32)/200.,
@@ -284,12 +291,14 @@ class TorcsEnv(gym.Env):
                 speedY=np.array([raw_obs['speedY']], dtype=np.float32)/self.default_speed,
                 speedZ=np.array([raw_obs['speedZ']], dtype=np.float32)/self.default_speed,
                 opponents=np.array(raw_obs['opponents'], dtype=np.float32)/200.,
-                rpm=np.array([raw_obs['rpm']], dtype=np.float32) / 10000.0, #normalizacja rpm do zakresu [0, 1]
+                rpm=np.array([raw_obs['rpm']], dtype=np.float32) / 10000.0,
                 track=np.array(raw_obs['track'], dtype=np.float32)/200.,
-                wheelSpinVel=np.array(raw_obs['wheelSpinVel'], dtype=np.float32) / 100.0 #normalizacja prędkości obrotowej koła do zakresu [0, 1]
+                wheelSpinVel=np.array(raw_obs['wheelSpinVel'], dtype=np.float32) / 100.0,
+                angle=np.array([raw_obs['angle']], dtype=np.float32) / np.pi,
+                trackPos=np.array([raw_obs['trackPos']], dtype=np.float32)
             )
         else:
-            names = ['focus', 'speedX', 'speedY', 'speedZ', 'opponents', 'rpm', 'track', 'wheelSpinVel', 'img']
+            names = ['focus', 'speedX', 'speedY', 'speedZ', 'opponents', 'rpm', 'track', 'wheelSpinVel', 'angle', 'trackPos', 'img']
             Observation = col.namedtuple('Observation', names)
             image_rgb = self.obs_vision_to_image_rgb(raw_obs['img'])
 
@@ -299,8 +308,10 @@ class TorcsEnv(gym.Env):
                 speedY=np.array([raw_obs['speedY']], dtype=np.float32)/self.default_speed,
                 speedZ=np.array([raw_obs['speedZ']], dtype=np.float32)/self.default_speed,
                 opponents=np.array(raw_obs['opponents'], dtype=np.float32)/200.,
-                rpm=np.array([raw_obs['rpm']], dtype=np.float32) / 10000.0, #normalizacja rpm do zakresu [0, 1]
+                rpm=np.array([raw_obs['rpm']], dtype=np.float32) / 10000.0,
                 track=np.array(raw_obs['track'], dtype=np.float32)/200.,
-                wheelSpinVel=np.array(raw_obs['wheelSpinVel'], dtype=np.float32) / 100.0, #normalizacja prędkości obrotowej koła do zakresu [0, 1]  
+                wheelSpinVel=np.array(raw_obs['wheelSpinVel'], dtype=np.float32) / 100.0,
+                angle=np.array([raw_obs['angle']], dtype=np.float32) / np.pi,
+                trackPos=np.array([raw_obs['trackPos']], dtype=np.float32),
                 img=image_rgb
             )
