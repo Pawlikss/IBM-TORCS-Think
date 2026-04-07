@@ -7,7 +7,7 @@ def main():
     raw_env = TorcsEnv(vision=False, throttle=True, gear_change=False)
     env = DummyVecEnv([lambda: raw_env])
 
-    model_filename = "torcs_sac_2100000_steps.zip"  
+    model_filename = "torcs_sac_610000_steps.zip"  
     model_path = os.path.join(".", "models", model_filename)
     
     print(f"Próbuję wczytać model z: {model_path}")

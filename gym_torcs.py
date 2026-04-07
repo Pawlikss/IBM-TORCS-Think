@@ -176,6 +176,8 @@ class TorcsEnv(gym.Env):
             "terminal_reason": terminal_reason,
             "reward_total": float(reward),
             "episode_terminate": bool(episode_terminate),
+            "speedX": float(speed_x),
+            "trackPos": float(track_pos)
         }
         
         terminated = bool(client.R.d["meta"])
