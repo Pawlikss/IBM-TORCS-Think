@@ -282,7 +282,7 @@ class TorcsEnv(gym.Env):
             if raw_accel >= -0.2:
                 torcs_action.update({'accel': (raw_accel + 0.2) / 1.2, 'brake': 0.0})
             else:
-                torcs_action.update({'accel': 0.0, 'brake': (-raw_accel - 0.2) / 0.8})
+                torcs_action.update({'accel': 0.0, 'brake': ((-raw_accel - 0.2) / 0.8) * 0.5})
             idx += 1
         if self.gear_change is True:
             gear_raw = float(a[idx])  
