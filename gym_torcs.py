@@ -23,11 +23,13 @@ class TorcsEnv(gym.Env):
         self.initial_run = True
 
         cwd = os.getcwd()
-        torcs_dir = pathlib.Path(__file__).resolve().parent.parent / "torcs"
-        if torcs_dir.exists():
-            os.chdir(torcs_dir)
-        else:
-            print(f"BŁĄD: brak torcs.exe w {torcs_dir}")
+        torcs_dir = pathlib.Path(__file__).resolve().parent / "torcs"
+        if not torcs_dir.exists() or not torcs_dir.is_dir():
+            raise FileNotFoundError(
+                f"Nie znaleziono katalogu TORCS: {torcs_dir}. "
+                "Upewnij się, że katalog 'torcs' jest w katalogu głównym repozytorium."
+            )
+        os.chdir(torcs_dir)
 
         os.system('taskkill /f /im wtorcs.exe >nul 2>&1')
         time.sleep(1.0)
@@ -215,9 +217,13 @@ class TorcsEnv(gym.Env):
 
     def reset_torcs(self):
         cwd = os.getcwd()
-        torcs_dir = pathlib.Path(__file__).resolve().parent.parent / "torcs"
-        if torcs_dir.exists():
-            os.chdir(torcs_dir)
+        torcs_dir = pathlib.Path(__file__).resolve().parent / "torcs"
+        if not torcs_dir.exists() or not torcs_dir.is_dir():
+            raise FileNotFoundError(
+                f"Nie znaleziono katalogu TORCS: {torcs_dir}. "
+                "Upewnij się, że katalog 'torcs' jest w katalogu głównym repozytorium."
+            )
+        os.chdir(torcs_dir)
 
         os.system('taskkill /f /im wtorcs.exe >nul 2>&1')
         time.sleep(1.0)
