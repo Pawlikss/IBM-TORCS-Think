@@ -86,9 +86,9 @@ def main():
     env = Monitor(env, "./logs/")
     env = DummyVecEnv([lambda: env])
 
-    MODEL_PATH = "./models/torcs_sac_250000_steps.zip"
-    REPLAY_BUFFER_PATH = "./models/torcs_sac_replay_buffer_250000_steps.pkl"
-    NORMALIZER_PATH = "./models/vec_normalize_250000_steps.pkl"
+    MODEL_PATH = "./models/torcs_sac_310000_steps.zip"
+    REPLAY_BUFFER_PATH = "./models/torcs_sac_replay_buffer_310000_steps.pkl"
+    NORMALIZER_PATH = "./models/vec_normalize_310000_steps.pkl"
 
     if os.path.exists(NORMALIZER_PATH):
         print(f"Wczytywanie statystyk normalizatora z: {NORMALIZER_PATH}")
@@ -114,7 +114,7 @@ def main():
             env, 
             verbose=1, 
             tensorboard_log="./tensorboard_logs/",
-            learning_rate=0.0003,    
+            learning_rate=0.0003,
             buffer_size=100000,      
             batch_size=256,          
             ent_coef="auto",
@@ -144,7 +144,7 @@ def main():
     ])
     
     try:
-        model.learn(total_timesteps=1000000, callback=callback_list, reset_num_timesteps=False)
+        model.learn(total_timesteps=1000000, callback=callback_list, reset_num_timesteps=True)
     except KeyboardInterrupt:
         print("\nPrzerwano trening ręcznie. Zapisywanie postępów...")
     finally:

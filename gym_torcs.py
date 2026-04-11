@@ -147,7 +147,7 @@ class TorcsEnv(gym.Env):
         self.last_steer = current_steer
 
         # Kara kroku
-        raw_reward -= 0.5
+        #raw_reward -= 0.5
 
         # Normalizacja
         reward = raw_reward / 100.0
@@ -175,6 +175,7 @@ class TorcsEnv(gym.Env):
 
         # Przerwij dopiero, gdy zamula przez np. 50 kroków z rzędu
         if self.low_speed_steps > 50:
+            reward -= 5.0
             episode_terminate = True
             terminal_reason = "low_progress"
             client.R.d["meta"] = True
