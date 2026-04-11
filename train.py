@@ -6,7 +6,7 @@ from stable_baselines3.common.callbacks import (
     CallbackList,
 )
 from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.vec_env import DummyVecEnv
+from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 from gym_torcs import TorcsEnv
 
 class LiveInfoCallback(BaseCallback):
@@ -60,6 +60,23 @@ class TerminationStatsCallback(BaseCallback):
                     print(f"\n[STATYSTYKI] Epizod {self.episodes} | {statystyki}")
         return True   
 
+class SaveVecNormalizeCallback(BaseCallback):
+    def __init__(self, save_freq: int, save_path: str, verbose=0):
+        super().__init__(verbose)
+        self.save_freq = save_freq
+        self.save_path = save_path
+
+    def _init_callback(self) -> None:
+        if self.save_path is not None:
+            os.makedirs(self.save_path, exist_ok=True)
+
+    def _on_step(self) -> bool:
+        if self.n_calls % self.save_freq == 0:
+            path = os.path.join(self.save_path, f"vec_normalize_{self.num_timesteps}_steps.pkl")
+            if isinstance(self.training_env, VecNormalize):
+                self.training_env.save(path)
+        return True
+
 def main():
     os.makedirs("./models", exist_ok=True)
     os.makedirs("./logs", exist_ok=True)
@@ -69,8 +86,18 @@ def main():
     env = Monitor(env, "./logs/")
     env = DummyVecEnv([lambda: env])
 
-    MODEL_PATH = "./models/torcs_sac_760000.zip"
-    REPLAY_BUFFER_PATH = "./models/torcs_sac_replay_buffer_760000_steps.pkl"
+    MODEL_PATH = "./models/torcs_sac_250000_steps.zip"
+    REPLAY_BUFFER_PATH = "./models/torcs_sac_replay_buffer_250000_steps.pkl"
+    NORMALIZER_PATH = "./models/vec_normalize_250000_steps.pkl"
+
+    if os.path.exists(NORMALIZER_PATH):
+        print(f"Wczytywanie statystyk normalizatora z: {NORMALIZER_PATH}")
+        env = VecNormalize.load(NORMALIZER_PATH, env)
+        env.training = True 
+        env.norm_reward = False
+    else:
+        print("Brak pliku normalizatora, start z czystymi statystykami!")
+        env = VecNormalize(env, norm_obs=True, norm_reward=False, clip_obs=10.0)
 
     if os.path.exists(MODEL_PATH):
         print("Wznawianie treningu z pliku: ", MODEL_PATH)
@@ -81,6 +108,7 @@ def main():
         else:
             print("Brak pliku Replay Buffer, start z pustą pamięcią!")
     else:
+        print("Brak istniejącego modelu, rozpoczynam trening od zera.")
         model = SAC(
             "MlpPolicy", 
             env, 
@@ -100,11 +128,17 @@ def main():
         save_replay_buffer=True
     )
     
+    save_vec_normalize_callback = SaveVecNormalizeCallback(
+        save_freq=10000, 
+        save_path="./models/"
+    )
+    
     term_stats_callback = TerminationStatsCallback(print_freq=10)
     live_info_callback = LiveInfoCallback()
 
     callback_list = CallbackList([
-        checkpoint_callback, 
+        checkpoint_callback,
+        save_vec_normalize_callback,
         term_stats_callback, 
         live_info_callback
     ])
@@ -117,7 +151,11 @@ def main():
         model.save(MODEL_PATH)
         if hasattr(model, "save_replay_buffer"):
             model.save_replay_buffer(REPLAY_BUFFER_PATH)
-        print("Najnowszy stan mózgu i bufor zostały zapisane pomyślnie")
+        
+        if isinstance(env, VecNormalize):
+            env.save(NORMALIZER_PATH)
+            
+        print("Najnowszy stan mózgu, bufor oraz normalizator zostały zapisane pomyślnie.")
 
 if __name__ == "__main__":
     main()
