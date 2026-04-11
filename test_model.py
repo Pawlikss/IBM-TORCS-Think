@@ -13,7 +13,7 @@ def main():
     print(f"Próbuję wczytać model z: {model_path}")
     model = SAC.load(model_path)
     
-    obs = env.reset()
+    obs, _ = env.reset()
     print("Rozpoczynam jazdę testową z telemetrią")
     
     while True:
@@ -29,11 +29,11 @@ def main():
             
         print(f"Kierownica: {steer:6.2f}  |  {pedal_str}")
         
-        obs, reward, done, info = env.step(action)
+        obs, reward, terminated, truncated, info = env.step(action)
         
-        if done[0]:
+        if terminated[0] or truncated[0]:
             print("Przerwana sesja")
-            obs = env.reset()
+            obs, _ = env.reset()
 
 if __name__ == "__main__":
     main()

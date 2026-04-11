@@ -176,7 +176,7 @@ class Client():
                     print("relaunch torcs")
                     
                     cwd = os.getcwd()
-                    torcs_dir = pathlib.Path(__file__).resolve().parent.parent / "torcs"
+                    torcs_dir = pathlib.Path(__file__).resolve().parent / "torcs"
                     if torcs_dir.exists():
                         os.chdir(torcs_dir)
 
