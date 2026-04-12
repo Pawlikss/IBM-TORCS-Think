@@ -137,17 +137,16 @@ class TorcsEnv(gym.Env):
         deadband = 0.2 # strefa, w której nie karzemy bycia lekko offcenter, żeby umożliwić bezpieczne trzymanie się krawędzi toru
         if abs(track_pos) > deadband:
             pos_penalty = (abs(track_pos) - deadband) * 0.5 # ewentualnie można zamiast 0.5 dać speed_x, żeby kara była większa przy większych prędkościach
-        else:
-            pos_penalty = 0.0
+            raw_reward -= pos_penalty
 
         # kara za szarpanie kierownicą
         steer_change = abs(current_steer - self.last_steer)
-        raw_reward -= steer_change * 3.0
+        raw_reward -= steer_change * 2.0
 
         self.last_steer = current_steer
 
         # Kara kroku
-        #raw_reward -= 0.5
+        raw_reward -= 1.0
 
         # Normalizacja
         reward = raw_reward / 100.0
@@ -169,16 +168,9 @@ class TorcsEnv(gym.Env):
 
         if not episode_terminate and self.terminal_judge_start < self.time_step:
             if forward_speed < self.termination_limit_progress:
-                self.low_speed_steps += 1
-            else:
-                self.low_speed_steps = 0
-
-        # Przerwij dopiero, gdy zamula przez np. 50 kroków z rzędu
-        if self.low_speed_steps > 50:
-            reward -= 5.0
-            episode_terminate = True
-            terminal_reason = "low_progress"
-            client.R.d["meta"] = True
+                episode_terminate = True
+                terminal_reason = "low_progress"
+                client.R.d["meta"] = True
 
         if client.R.d["meta"] is True: 
             self.initial_run = False

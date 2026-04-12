@@ -86,14 +86,14 @@ def main():
     env = Monitor(env, "./logs/")
     env = DummyVecEnv([lambda: env])
 
-    MODEL_PATH = "./models/torcs_sac_310000_steps.zip"
-    REPLAY_BUFFER_PATH = "./models/torcs_sac_replay_buffer_310000_steps.pkl"
-    NORMALIZER_PATH = "./models/vec_normalize_310000_steps.pkl"
+    MODEL_PATH = "./models/torcs_sac_1360000_steps.zip"
+    REPLAY_BUFFER_PATH = "./models/torcs_sac_replay_buffer_1360000_steps.pkl"
+    NORMALIZER_PATH = "./models/vec_normalize_1360000_steps.pkl"
 
     if os.path.exists(NORMALIZER_PATH):
         print(f"Wczytywanie statystyk normalizatora z: {NORMALIZER_PATH}")
         env = VecNormalize.load(NORMALIZER_PATH, env)
-        env.training = True 
+        env.training = True
         env.norm_reward = False
     else:
         print("Brak pliku normalizatora, start z czystymi statystykami!")

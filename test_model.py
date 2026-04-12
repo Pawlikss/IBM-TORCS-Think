@@ -7,9 +7,9 @@ def main():
     raw_env = TorcsEnv(vision=False, throttle=True, gear_change=False)
     env = DummyVecEnv([lambda: raw_env])
 
-    model_filename = "torcs_sac_550000_steps"  
+    model_filename = "torcs_sac_850000_steps"  
     model_path = os.path.join(".", "models", model_filename)
-    normalizer_path = os.path.join(".", "models", "vec_normalize_550000_steps.pkl")
+    normalizer_path = os.path.join(".", "models", "vec_normalize_850000_steps.pkl")
     
     if os.path.exists(normalizer_path):
         print(f"Wczytuję statystyki normalizatora z: {normalizer_path}")
