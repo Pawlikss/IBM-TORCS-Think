@@ -23,12 +23,12 @@ class TorcsEnv(gym.Env):
         self.initial_run = True
 
         cwd = os.getcwd()
-        torcs_dir = pathlib.Path(__file__).resolve().parent / "torcs"
-        if not torcs_dir.exists() or not torcs_dir.is_dir():
-            raise FileNotFoundError(
-                f"Nie znaleziono katalogu TORCS: {torcs_dir}. "
-                "Upewnij się, że katalog 'torcs' jest w katalogu głównym repozytorium."
-            )
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        torcs_dir = os.path.join(script_dir, "torcs")
+        
+        if not os.path.exists(torcs_dir):
+            raise FileNotFoundError(f"Nie znaleziono folderu TORCS w: {torcs_dir}")
+            
         os.chdir(torcs_dir)
 
         os.system('taskkill /f /im wtorcs.exe >nul 2>&1')
@@ -44,9 +44,8 @@ class TorcsEnv(gym.Env):
             pyautogui.press(key)
             time.sleep(0.2)
         time.sleep(5.0)
+        
         os.chdir(cwd)
-
-        self.low_speed_steps = 0
 
         if throttle is False:
             self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(1,), dtype=np.float32)
@@ -131,25 +130,47 @@ class TorcsEnv(gym.Env):
         current_steer = float(this_action["steer"])
         cos_a = np.cos(angle)
 
-        forward_speed = speed_x * cos_a
-        raw_reward = forward_speed * 0.1
+        #nagroda za prędkość do przodu
+        forward = speed_x * cos_a
+        raw_reward = forward * 0.1
 
-        deadband = 0.2 # strefa, w której nie karzemy bycia lekko offcenter, żeby umożliwić bezpieczne trzymanie się krawędzi toru
-        if abs(track_pos) > deadband:
-            pos_penalty = (abs(track_pos) - deadband) * 0.5 # ewentualnie można zamiast 0.5 dać speed_x, żeby kara była większa przy większych prędkościach
-            raw_reward -= pos_penalty
-
-        # kara za szarpanie kierownicą
         steer_change = abs(current_steer - self.last_steer)
-        raw_reward -= steer_change * 2.0
+        #kara za szarpanie
+        raw_reward -= (steer_change ** 2) * 5.0
 
         self.last_steer = current_steer
 
-        # Kara kroku
-        raw_reward -= 1.0
+        #Kara za zbliżanie się do zakrętu bez redukcji prędkości
+        if track.size > 10:
+            front_distance = max(track[8], track[9], track[10]) / 200.0
+        else:
+            front_distance = 1.0
+            
+        front_distance = np.clip(front_distance, 0.0, 1.0)
+        current_brake = float(this_action.get("brake", 0.0))
 
-        # Normalizacja
+        threshold = 0.3
+
+        if front_distance < threshold:
+            curve_risk = (threshold - front_distance) / threshold
+            
+            speed_penalty = 25.0 * curve_risk * ((max(speed_x, 0.0) / 100.0) ** 2)
+
+            if current_brake > 0:
+                shield = speed_penalty * (current_brake * 0.8)
+                speed_penalty -= shield
+
+            raw_reward -= speed_penalty
+
+        #kara za zjazd ze srodka toru
+        deadband = 0.3 
+        if abs(track_pos) > deadband:
+            pos_penalty = (abs(track_pos) - deadband) * 0.5 
+            raw_reward -= pos_penalty
+
+        #normalizacja nagrody
         reward = raw_reward / 100.0
+
         # Termination judgement
         episode_terminate = False
         terminal_reason = None
@@ -167,7 +188,7 @@ class TorcsEnv(gym.Env):
             client.R.d["meta"] = True
 
         if not episode_terminate and self.terminal_judge_start < self.time_step:
-            if forward_speed < self.termination_limit_progress:
+            if forward < self.termination_limit_progress:
                 episode_terminate = True
                 terminal_reason = "low_progress"
                 client.R.d["meta"] = True
@@ -196,8 +217,6 @@ class TorcsEnv(gym.Env):
         
         self.last_steer = 0.0
 
-        self.low_speed_steps = 0 # resetujemy licznik kroków niskiej prędkości przy każdym restarcie
-
         if getattr(self, "_force_relaunch_next_reset", False):
             self.reset_torcs()
             self._force_relaunch_next_reset = False
@@ -223,12 +242,12 @@ class TorcsEnv(gym.Env):
 
     def reset_torcs(self):
         cwd = os.getcwd()
-        torcs_dir = pathlib.Path(__file__).resolve().parent / "torcs"
-        if not torcs_dir.exists() or not torcs_dir.is_dir():
-            raise FileNotFoundError(
-                f"Nie znaleziono katalogu TORCS: {torcs_dir}. "
-                "Upewnij się, że katalog 'torcs' jest w katalogu głównym repozytorium."
-            )
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        torcs_dir = os.path.join(script_dir, "torcs")
+        
+        if not os.path.exists(torcs_dir):
+            raise FileNotFoundError(f"Nie znaleziono folderu TORCS w: {torcs_dir}")
+            
         os.chdir(torcs_dir)
 
         os.system('taskkill /f /im wtorcs.exe >nul 2>&1')
@@ -244,6 +263,7 @@ class TorcsEnv(gym.Env):
             pyautogui.press(key)
             time.sleep(0.2)
         time.sleep(5.0)
+        
         os.chdir(cwd)
 
     def end(self):
@@ -270,11 +290,10 @@ class TorcsEnv(gym.Env):
 
         if self.throttle is True:
             raw_accel = float(a[idx])
-            # Podział: [-1.0 do -0.2) to hamulec, [-0.2 do 1.0] to gaz
             if raw_accel >= -0.2:
                 torcs_action.update({'accel': (raw_accel + 0.2) / 1.2, 'brake': 0.0})
             else:
-                torcs_action.update({'accel': 0.0, 'brake': ((-raw_accel - 0.2) / 0.8) * 0.5})
+                torcs_action.update({'accel': 0.0, 'brake': (-raw_accel - 0.2) / 0.8})
             idx += 1
         if self.gear_change is True:
             gear_raw = float(a[idx])  
