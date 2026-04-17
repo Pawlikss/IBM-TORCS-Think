@@ -102,11 +102,11 @@ def main():
             env, 
             verbose=1, 
             tensorboard_log="./tensorboard_logs/",
-            learning_rate=0.00005,    
+            learning_rate=0.0003,    # do fine tuning można obniżyć do 0.0001
             buffer_size=1000000,
             batch_size=256,          
             ent_coef="auto",
-            learning_starts=2000,
+            learning_starts=10000,
         )
 
     checkpoint_callback = CheckpointCallback(
