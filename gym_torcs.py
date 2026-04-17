@@ -154,13 +154,12 @@ class TorcsEnv(gym.Env):
         if front_distance < threshold:
             curve_risk = (threshold - front_distance) / threshold
             
-            speed_penalty = 10.0 * curve_risk * ((max(speed_x, 0.0) / 100.0) ** 2)
-
-            if current_brake > 0:
-                shield = speed_penalty * (current_brake * 0.8)
-                speed_penalty -= shield
-
-            raw_reward -= speed_penalty
+            safe_speed = 90.0
+            
+            if speed_x > safe_speed:
+                excess_speed = speed_x - safe_speed
+                speed_penalty = 10.0 * curve_risk * ((excess_speed / 100.0) ** 2)
+                raw_reward -= speed_penalty
 
         #kara za zjazd ze srodka toru
         deadband = 0.3 
