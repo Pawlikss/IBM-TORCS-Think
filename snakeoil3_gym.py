@@ -176,8 +176,10 @@ class Client():
                     print("relaunch torcs")
                     
                     cwd = os.getcwd()
-                    torcs_dir = pathlib.Path(__file__).resolve().parent / "torcs"
-                    if torcs_dir.exists():
+                    script_dir = os.path.dirname(os.path.abspath(__file__))
+                    torcs_dir = os.path.join(script_dir, "torcs")
+                    
+                    if os.path.exists(torcs_dir):
                         os.chdir(torcs_dir)
 
                     os.system('taskkill /f /im wtorcs.exe >nul 2>&1')

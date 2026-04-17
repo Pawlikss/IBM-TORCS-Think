@@ -154,7 +154,7 @@ class TorcsEnv(gym.Env):
         if front_distance < threshold:
             curve_risk = (threshold - front_distance) / threshold
             
-            speed_penalty = 25.0 * curve_risk * ((max(speed_x, 0.0) / 100.0) ** 2)
+            speed_penalty = 10.0 * curve_risk * ((max(speed_x, 0.0) / 100.0) ** 2)
 
             if current_brake > 0:
                 shield = speed_penalty * (current_brake * 0.8)
