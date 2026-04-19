@@ -9,8 +9,7 @@ def main():
     env = DummyVecEnv([lambda: raw_env])
 
     # TUTAJ WPISZ NAZWĘ PLIKU, KTÓRY CHCESZ PRZETESTOWAĆ
-    # np. z nowego folderu fine-tuningu
-    model_filename = "torcs_sac_454997.zip"  
+    model_filename = "torcs_sac_320000_steps.zip"  
     model_path = os.path.join(".", "models", model_filename)
 
     print(f"Próbuję wczytać model z: {model_path}")
@@ -30,7 +29,6 @@ def main():
         steer = action[0][0]
         pedal = action[0][1]
         
-        # IDEALNIE ZSYNCHRONIZOWANA MATEMATYKA PEDAŁÓW (Próg na -0.2)
         if pedal >= -0.2:
             # Zakres od -0.2 do 1.0 = rozpiętość 1.2
             gaz_procent = ((pedal + 0.2) / 1.2) * 100.0

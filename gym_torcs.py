@@ -129,18 +129,19 @@ class TorcsEnv(gym.Env):
         track = np.asarray(obs["track"], dtype=np.float32)
         current_steer = float(this_action["steer"])
         cos_a = np.cos(angle)
-
-        #nagroda za prędkość do przodu
+        
+        # nagroda za prędkość
         forward = speed_x * cos_a
         raw_reward = forward * 0.1
 
-        steer_change = abs(current_steer - self.last_steer)
-        #kara za szarpanie
-        raw_reward -= (steer_change ** 2) * 5.0
+        raw_reward -= 1.0 
 
+        # kara za szarpanie kierownicą
+        steer_change = abs(current_steer - self.last_steer)
+        raw_reward -= (steer_change ** 2) * 5.0
         self.last_steer = current_steer
 
-        #Kara za zbliżanie się do zakrętu bez redukcji prędkości
+        # płynna kara przedz zakrętem
         if track.size > 10:
             front_distance = max(track[8], track[9], track[10]) / 200.0
         else:
@@ -149,25 +150,26 @@ class TorcsEnv(gym.Env):
         front_distance = np.clip(front_distance, 0.0, 1.0)
         current_brake = float(this_action.get("brake", 0.0))
 
-        threshold = 0.3
+        threshold = 0.5  # Próg wizji (100 metrów)
 
         if front_distance < threshold:
             curve_risk = (threshold - front_distance) / threshold
             
-            safe_speed = 90.0
-            
-            if speed_x > safe_speed:
-                excess_speed = speed_x - safe_speed
-                speed_penalty = 10.0 * curve_risk * ((excess_speed / 100.0) ** 2)
-                raw_reward -= speed_penalty
+            speed_penalty = 20.0 * curve_risk * ((max(speed_x, 0.0) / 100.0) ** 2)
+            raw_reward -= speed_penalty
 
-        #kara za zjazd ze srodka toru
+        # blokada hamowania na prostej
+        straight_factor = np.clip((front_distance - 0.5) / 0.5, 0.0, 1.0)
+        brake_penalty = 5.0 * current_brake * straight_factor
+        raw_reward -= brake_penalty
+
+        # Kara za zbyt duże wychylenie od środka
         deadband = 0.3 
         if abs(track_pos) > deadband:
             pos_penalty = (abs(track_pos) - deadband) * 0.5 
             raw_reward -= pos_penalty
 
-        #normalizacja nagrody
+        # Normalizacja
         reward = raw_reward / 100.0
 
         # Termination judgement
@@ -175,13 +177,13 @@ class TorcsEnv(gym.Env):
         terminal_reason = None
 
         if abs(track_pos) > 1.0 or track.min() < 0:
-            reward -= 5.0
+            reward -= 50.0
             episode_terminate = True
             terminal_reason = "off_track"
             client.R.d["meta"] = True
 
         if not episode_terminate and cos_a < 0:
-            reward -= 5.0
+            reward -= 50.0
             episode_terminate = True
             terminal_reason = "backward"
             client.R.d["meta"] = True

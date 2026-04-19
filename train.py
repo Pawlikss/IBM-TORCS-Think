@@ -71,8 +71,8 @@ def main():
     env = Monitor(env, "./logs/")
     env = DummyVecEnv([lambda: env])
 
-    MODEL_PATH = "./models/torcs_sac_300000_steps.zip"
-    REPLAY_BUFFER_PATH = "./models/torcs_sac_replay_buffer_xx_steps.pkl"
+    MODEL_PATH = "./models/torcs_sac_130000_steps.zip"
+    REPLAY_BUFFER_PATH = "./models/torcs_sac_replay_buffer_130000_steps.pkl"
 
     if os.path.exists(MODEL_PATH):
         print("Wznawianie treningu z pliku: ", MODEL_PATH)
