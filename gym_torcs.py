@@ -132,9 +132,7 @@ class TorcsEnv(gym.Env):
         
         # nagroda za prędkość
         forward = speed_x * cos_a
-        raw_reward = forward * 0.1
-
-        raw_reward -= 1.0 
+        raw_reward = (forward * 0.1) - 6.5
 
         # kara za szarpanie kierownicą
         steer_change = abs(current_steer - self.last_steer)
@@ -150,16 +148,17 @@ class TorcsEnv(gym.Env):
         front_distance = np.clip(front_distance, 0.0, 1.0)
         current_brake = float(this_action.get("brake", 0.0))
 
-        threshold = 0.5  # Próg wizji (100 metrów)
+        threshold = 0.3
 
         if front_distance < threshold:
             curve_risk = (threshold - front_distance) / threshold
             
+            # Płynna kara kwadratowa za pędzenie w zakręt
             speed_penalty = 20.0 * curve_risk * ((max(speed_x, 0.0) / 100.0) ** 2)
             raw_reward -= speed_penalty
 
-        # blokada hamowania na prostej
-        straight_factor = np.clip((front_distance - 0.5) / 0.5, 0.0, 1.0)
+        # Od 0.0 do 0.3 jesteśmy w zakręcie (factor = 0.0). Powyżej 0.3 zaczyna się prosta.
+        straight_factor = np.clip((front_distance - 0.3) / 0.7, 0.0, 1.0)
         brake_penalty = 5.0 * current_brake * straight_factor
         raw_reward -= brake_penalty
 
@@ -190,6 +189,7 @@ class TorcsEnv(gym.Env):
 
         if not episode_terminate and self.terminal_judge_start < self.time_step:
             if forward < self.termination_limit_progress:
+                reward -= 50.0
                 episode_terminate = True
                 terminal_reason = "low_progress"
                 client.R.d["meta"] = True
@@ -291,10 +291,10 @@ class TorcsEnv(gym.Env):
 
         if self.throttle is True:
             raw_accel = float(a[idx])
-            if raw_accel >= -0.2:
-                torcs_action.update({'accel': (raw_accel + 0.2) / 1.2, 'brake': 0.0})
+            if raw_accel >= -0.7:
+                torcs_action.update({'accel': (raw_accel + 0.7) / 1.7, 'brake': 0.0})
             else:
-                torcs_action.update({'accel': 0.0, 'brake': (-raw_accel - 0.2) / 0.8})
+                torcs_action.update({'accel': 0.0, 'brake': (-raw_accel - 0.7) / 0.3})
             idx += 1
         if self.gear_change is True:
             gear_raw = float(a[idx])  

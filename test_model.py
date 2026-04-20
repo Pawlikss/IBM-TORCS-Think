@@ -4,12 +4,11 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 from gym_torcs import TorcsEnv
 
 def main():
-    # Czyste środowisko (bez VecNormalize, zgodnie z naszym nowym planem)
     raw_env = TorcsEnv(vision=False, throttle=True, gear_change=False)
     env = DummyVecEnv([lambda: raw_env])
 
     # TUTAJ WPISZ NAZWĘ PLIKU, KTÓRY CHCESZ PRZETESTOWAĆ
-    model_filename = "torcs_sac_320000_steps.zip"  
+    model_filename = "torcs_sac_850000_steps.zip"  
     model_path = os.path.join(".", "models", model_filename)
 
     print(f"Próbuję wczytać model z: {model_path}")
@@ -29,13 +28,13 @@ def main():
         steer = action[0][0]
         pedal = action[0][1]
         
-        if pedal >= -0.2:
-            # Zakres od -0.2 do 1.0 = rozpiętość 1.2
-            gaz_procent = ((pedal + 0.2) / 1.2) * 100.0
+        if pedal >= -0.7:
+            # Zakres od -0.7 do 1.0 = rozpiętość 1.7
+            gaz_procent = ((pedal + 0.7) / 1.7) * 100.0
             pedal_str = f"GAZ: {gaz_procent:3.0f}%    "
         else:
-            # Zakres od -1.0 do -0.2 = rozpiętość 0.8
-            hamulec_procent = ((-pedal - 0.2) / 0.8) * 100.0
+            # Zakres od -1.0 do -0.7 = rozpiętość 0.3
+            hamulec_procent = ((-pedal - 0.7) / 0.3) * 100.0
             pedal_str = f"HAM: {hamulec_procent:3.0f}%"
             
         obs, reward, done, info = env.step(action)
