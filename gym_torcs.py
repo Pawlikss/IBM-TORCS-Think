@@ -134,9 +134,14 @@ class TorcsEnv(gym.Env):
         forward = speed_x * cos_a
         raw_reward = (forward * 0.1) - 6.5
 
+        #kara za jazde bokiem do kierunku jazdy żeby nie wężykował
+        sin_a = np.sin(angle)
+        side = abs(speed_x * sin_a)
+        raw_reward -= side * 0.5
+
         # kara za szarpanie kierownicą
         steer_change = abs(current_steer - self.last_steer)
-        raw_reward -= (steer_change ** 2) * 5.0
+        raw_reward -= (steer_change ** 2) * 1.0
         self.last_steer = current_steer
 
         # płynna kara przedz zakrętem
@@ -154,12 +159,12 @@ class TorcsEnv(gym.Env):
             curve_risk = (threshold - front_distance) / threshold
             
             # Płynna kara kwadratowa za pędzenie w zakręt
-            speed_penalty = 20.0 * curve_risk * ((max(speed_x, 0.0) / 100.0) ** 2)
+            speed_penalty = 10.0 * curve_risk * ((max(speed_x, 0.0) / 100.0) ** 2)
             raw_reward -= speed_penalty
 
         # Od 0.0 do 0.3 jesteśmy w zakręcie (factor = 0.0). Powyżej 0.3 zaczyna się prosta.
         straight_factor = np.clip((front_distance - 0.3) / 0.7, 0.0, 1.0)
-        brake_penalty = 5.0 * current_brake * straight_factor
+        brake_penalty = 3.0 * current_brake * straight_factor
         raw_reward -= brake_penalty
 
         # Kara za zbyt duże wychylenie od środka
