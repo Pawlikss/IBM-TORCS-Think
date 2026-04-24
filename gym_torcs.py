@@ -10,8 +10,8 @@ import pyautogui
 import pathlib
 
 class TorcsEnv(gym.Env):
-    terminal_judge_start = 500  
-    termination_limit_progress = 5  
+    terminal_judge_start = 500
+    termination_limit_progress = 30
     default_speed = 50
 
     initial_reset = True
@@ -129,19 +129,18 @@ class TorcsEnv(gym.Env):
         track = np.asarray(obs["track"], dtype=np.float32)
         current_steer = float(this_action["steer"])
         cos_a = np.cos(angle)
-        
+        sin_a = np.sin(angle)
+
         # nagroda za prędkość
         forward = speed_x * cos_a
-        raw_reward = (forward * 0.1) - 6.5
-
-        #kara za jazde bokiem do kierunku jazdy żeby nie wężykował
-        sin_a = np.sin(angle)
         side = abs(speed_x * sin_a)
-        raw_reward -= side * 0.5
+        raw_reward = (forward * 0.05) - (side * 0.3)
+
+        raw_reward -= 1.5
 
         # kara za szarpanie kierownicą
         steer_change = abs(current_steer - self.last_steer)
-        raw_reward -= (steer_change ** 2) * 1.0
+        raw_reward -= steer_change * 1.5
         self.last_steer = current_steer
 
         # płynna kara przedz zakrętem
@@ -159,42 +158,40 @@ class TorcsEnv(gym.Env):
             curve_risk = (threshold - front_distance) / threshold
             
             # Płynna kara kwadratowa za pędzenie w zakręt
-            speed_penalty = 10.0 * curve_risk * ((max(speed_x, 0.0) / 100.0) ** 2)
+            speed_penalty = 3.0 * curve_risk * ((max(speed_x, 0.0) / 100.0) ** 2)
             raw_reward -= speed_penalty
 
-        # Od 0.0 do 0.3 jesteśmy w zakręcie (factor = 0.0). Powyżej 0.3 zaczyna się prosta.
-        straight_factor = np.clip((front_distance - 0.3) / 0.7, 0.0, 1.0)
-        brake_penalty = 3.0 * current_brake * straight_factor
-        raw_reward -= brake_penalty
+        straight_factor = np.clip((front_distance - threshold) / (1.0 - threshold), 0.0, 1.0)
+        raw_reward -= 0.1 * current_brake * straight_factor
 
         # Kara za zbyt duże wychylenie od środka
         deadband = 0.3 
         if abs(track_pos) > deadband:
-            pos_penalty = (abs(track_pos) - deadband) * 0.5 
+            pos_penalty = (abs(track_pos) - deadband) * 1.0
             raw_reward -= pos_penalty
 
         # Normalizacja
-        reward = raw_reward / 100.0
+        reward = raw_reward
 
         # Termination judgement
         episode_terminate = False
         terminal_reason = None
 
         if abs(track_pos) > 1.0 or track.min() < 0:
-            reward -= 50.0
+            reward -= 15.0
             episode_terminate = True
             terminal_reason = "off_track"
             client.R.d["meta"] = True
 
         if not episode_terminate and cos_a < 0:
-            reward -= 50.0
+            reward -= 15.0
             episode_terminate = True
             terminal_reason = "backward"
             client.R.d["meta"] = True
 
         if not episode_terminate and self.terminal_judge_start < self.time_step:
             if forward < self.termination_limit_progress:
-                reward -= 50.0
+                reward -= 15.0
                 episode_terminate = True
                 terminal_reason = "low_progress"
                 client.R.d["meta"] = True
