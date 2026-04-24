@@ -10,8 +10,8 @@ import pyautogui
 import pathlib
 
 class TorcsEnv(gym.Env):
-    terminal_judge_start = 500
-    termination_limit_progress = 30
+    terminal_judge_start = 250
+    termination_limit_progress = 15
     default_speed = 50
 
     initial_reset = True
@@ -134,13 +134,13 @@ class TorcsEnv(gym.Env):
         # nagroda za prędkość
         forward = speed_x * cos_a
         side = abs(speed_x * sin_a)
-        raw_reward = (forward * 0.05) - (side * 0.3)
+        raw_reward = (forward * 0.05) - (side * 0.1)
 
         raw_reward -= 1.5
 
         # kara za szarpanie kierownicą
         steer_change = abs(current_steer - self.last_steer)
-        raw_reward -= steer_change * 1.5
+        raw_reward -= steer_change * 0.5
         self.last_steer = current_steer
 
         # płynna kara przedz zakrętem
@@ -177,7 +177,7 @@ class TorcsEnv(gym.Env):
         episode_terminate = False
         terminal_reason = None
 
-        if abs(track_pos) > 1.0 or track.min() < 0:
+        if abs(track_pos) > 1.0:
             reward -= 15.0
             episode_terminate = True
             terminal_reason = "off_track"
@@ -189,8 +189,24 @@ class TorcsEnv(gym.Env):
             terminal_reason = "backward"
             client.R.d["meta"] = True
 
+        # --- CIERPLIWY SĘDZIA ---
+        # Uruchamia się dopiero po 250 krokach (5 sekundach startowych)
         if not episode_terminate and self.terminal_judge_start < self.time_step:
-            if forward < self.termination_limit_progress:
+            progress_floor = self.termination_limit_progress # 15.0 km/h
+            
+            # W zakręcie agent ma prawo zwolnić do 5 km/h
+            if front_distance < threshold:
+                progress_floor = 5.0 
+
+            current_low_steps = getattr(self, "_low_progress_steps", 0)
+
+            if forward < progress_floor:
+                self._low_progress_steps = current_low_steps + 1
+            else:
+                self._low_progress_steps = 0
+
+            # Cierpliwość Sędziego na zatrzymanie wynosi 60 kroków (ponad sekunda postoju)
+            if self._low_progress_steps >= 60:
                 reward -= 15.0
                 episode_terminate = True
                 terminal_reason = "low_progress"
@@ -219,6 +235,8 @@ class TorcsEnv(gym.Env):
         self.time_step = 0
         
         self.last_steer = 0.0
+
+        self._low_progress_steps = 0
 
         if getattr(self, "_force_relaunch_next_reset", False):
             self.reset_torcs()
